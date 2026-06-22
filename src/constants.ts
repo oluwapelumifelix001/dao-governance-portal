@@ -1,0 +1,1 @@
+export { CONTRACT_ADDRESS, CONTRACT_ABI } from "./constants/contractConfig";
