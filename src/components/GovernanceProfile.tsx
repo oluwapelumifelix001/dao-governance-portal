@@ -4,10 +4,13 @@ import { ethers } from 'ethers';
 interface GovernanceProfileProps {
   daoContract: ethers.Contract | null;
   account: string | null;
+  onBalanceUpdate?: () => void;
 }
 
-export default function GovernanceProfile({ daoContract, account }: GovernanceProfileProps) {
+export default function GovernanceProfile({ daoContract, account, onBalanceUpdate }: GovernanceProfileProps) {
   const [tokenBalance, setTokenBalance] = useState<number>(0);
+  const [hasClaimed, setHasClaimed] = useState<boolean>(false);
+  const [claiming, setClaiming] = useState<boolean>(false);
   const [recipient, setRecipient] = useState<string>("");
   const [transferAmount, setTransferAmount] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
@@ -18,6 +21,7 @@ export default function GovernanceProfile({ daoContract, account }: GovernancePr
   const fetchGovernanceData = async () => {
     if (!daoContract || !account) {
       setTokenBalance(0);
+      setHasClaimed(false);
       setLoading(false);
       return;
     }
@@ -29,10 +33,43 @@ export default function GovernanceProfile({ daoContract, account }: GovernancePr
       // Convert raw BigInt base units safely using formatUnits
       const formattedBalance = parseFloat(ethers.formatUnits(rawBalance, 18));
       setTokenBalance(formattedBalance);
+
+      // Fetch whether the user has claimed starter tokens
+      const claimed = await daoContract.hasClaimed(account);
+      setHasClaimed(claimed);
+
       setLoading(false);
     } catch (err) {
       console.error("Error fetching governance profile:", err);
       setLoading(false);
+    }
+  };
+
+  const handleClaim = async () => {
+    if (!daoContract || !account) return;
+
+    setClaiming(true);
+    setStatusMessage(null);
+    try {
+      setStatusMessage({ text: "Initiating faucet claim transaction...", isError: false });
+      const tx = await daoContract.claim();
+      setStatusMessage({ text: "Claim transaction processing. Waiting for block confirmation...", isError: false });
+      
+      await tx.wait();
+      setStatusMessage({ text: "Successfully claimed 5,000 starter GOV tokens!", isError: false });
+      
+      // Refresh local component data
+      await fetchGovernanceData();
+
+      // Trigger global state refresh if parent callback exists
+      if (onBalanceUpdate) {
+        onBalanceUpdate();
+      }
+    } catch (err: any) {
+      console.error("Faucet claim failed:", err);
+      setStatusMessage({ text: err.reason || err.message || "Claim transaction failed.", isError: true });
+    } finally {
+      setClaiming(false);
     }
   };
 
@@ -69,6 +106,11 @@ export default function GovernanceProfile({ daoContract, account }: GovernancePr
       setRecipient("");
       setTransferAmount("");
       fetchGovernanceData(); // Refresh metrics
+
+      // Trigger global state refresh if parent callback exists
+      if (onBalanceUpdate) {
+        onBalanceUpdate();
+      }
     } catch (err: any) {
       console.error("Transfer failed:", err);
       setStatusMessage({ text: err.reason || "Transaction failed.", isError: true });
@@ -113,6 +155,26 @@ export default function GovernanceProfile({ daoContract, account }: GovernancePr
             {loading ? "..." : `${votingPowerPercentage}%`}
           </span>
         </div>
+      </div>
+
+      {/* Claim Faucet Section */}
+      <div className="mb-5">
+        {hasClaimed || tokenBalance > 0 ? (
+          <button
+            disabled
+            className="w-full bg-slate-950 border border-slate-800/60 text-slate-500 font-bold py-2.5 px-4 rounded-xl text-xs tracking-wider uppercase cursor-not-allowed text-center opacity-60"
+          >
+            Tokens Claimed
+          </button>
+        ) : (
+          <button
+            onClick={handleClaim}
+            disabled={claiming || loading}
+            className="w-full bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 font-extrabold py-2.5 px-4 rounded-xl text-xs tracking-wider uppercase shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 transition-all duration-300 disabled:opacity-50"
+          >
+            {claiming ? "Claiming..." : "Claim Starter Tokens"}
+          </button>
+        )}
       </div>
 
       {/* Transfer Tokens Section */}

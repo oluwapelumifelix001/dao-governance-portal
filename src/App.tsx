@@ -352,7 +352,7 @@ function App() {
             {/* Governance Profile Panel */}
             {isConnected && (
               <div className="transition-all duration-500 animate-in fade-in slide-in-from-bottom-3">
-                <GovernanceProfile daoContract={contract} account={account} />
+                <GovernanceProfile daoContract={contract} account={account} onBalanceUpdate={refetchBalance} />
               </div>
             )}
           </section>
@@ -551,6 +551,7 @@ function App() {
 
       </div>
       {/* MINIMAL FOOTER CONFIGURATION */}
+      
       <footer className="mt-12 border-t border-slate-900/80 py-6 text-center text-[10px] font-mono tracking-wider text-slate-600 relative z-10">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-6xl mx-auto px-4">
           <p>© {new Date().getFullYear()} FLEXY | DEV. ALL RIGHTS RESERVED.</p>
