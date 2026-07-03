@@ -30,8 +30,14 @@ export default function GovernanceProfile({ daoContract, account, onBalanceUpdat
       // Fetch user balance directly from the public mapping
       const rawBalance = await daoContract.userBalances(account);
       
-      // Convert raw BigInt base units safely using formatUnits
-      const formattedBalance = parseFloat(ethers.formatUnits(rawBalance, 18));
+      const raw = BigInt(rawBalance.toString());
+      let formattedBalance: number;
+      // Fallback for raw integer balances (non-scaled)
+      if (raw > 0n && raw < 1000000000000n) {
+        formattedBalance = Number(raw);
+      } else {
+        formattedBalance = parseFloat(ethers.formatUnits(rawBalance, 18));
+      }
       setTokenBalance(formattedBalance);
 
       // Fetch whether the user has claimed starter tokens

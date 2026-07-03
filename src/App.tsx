@@ -168,8 +168,13 @@ function App() {
 
   // PATCH: Safely parses raw blockchain BigInt base units down to readable standard numbers
   const userBalance = (() => {
-    if (!userBalanceData) return "0";
+    if (userBalanceData === null || userBalanceData === undefined) return "0";
     try {
+      const raw = BigInt(userBalanceData.toString());
+      // Fallback for raw integer balances (non-scaled)
+      if (raw > 0n && raw < 1000000000000n) {
+        return Number(raw).toLocaleString();
+      }
       return parseFloat(ethers.formatUnits(userBalanceData, 18)).toLocaleString(undefined, {
         maximumFractionDigits: 2,
       });
